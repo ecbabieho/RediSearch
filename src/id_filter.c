@@ -5,18 +5,19 @@
 
 /* Create a new IdFilter from a list of redis strings. count is the number of strings, guaranteed to
  * be less than or equal to the length of args */
-IdFilter NewIdFilter(RedisModuleString **args, int count, DocTable *dt) {
+IdFilter *NewIdFilter(RedisModuleString **args, int count, DocTable *dt) {
 
-  IdFilter ret = {.ids = NULL, .keys = args, .size = 0};
+  IdFilter *ret = rm_malloc(sizeof(*ret));
+  *ret = (IdFilter){.ids = NULL, .keys = args, .size = 0};
   if (count <= 0) {
     return ret;
   }
-  ret.ids = rm_calloc(count, sizeof(t_docId));
+  ret->ids = rm_calloc(count, sizeof(t_docId));
   for (int i = 0; i < count; i++) {
 
     t_docId did = DocTable_GetId(dt, RedisModule_StringPtrLen(args[i], NULL));
     if (did) {
-      ret.ids[ret.size++] = did;
+      ret->ids[ret->size++] = did;
     }
   }
 
@@ -28,6 +29,7 @@ void IdFilter_Free(IdFilter *f) {
     rm_free(f->ids);
     f->ids = NULL;
   }
+  rm_free(f);
 }
 
 IndexIterator *NewIdFilterIterator(IdFilter *f) {

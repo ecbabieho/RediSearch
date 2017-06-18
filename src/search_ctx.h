@@ -10,4 +10,6 @@ typedef struct {
   IndexSpec *spec;
 } RedisSearchCtx;
 
+RedisSearchCtx *NewSearchCtx(RedisModuleCtx *ctx, RedisModuleString *indexName);
+void SearchCtx_Free(RedisSearchCtx *sctx);
 #endif

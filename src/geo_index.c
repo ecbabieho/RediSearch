@@ -50,7 +50,15 @@ int GeoFilter_Parse(GeoFilter *gf, RedisModuleString **argv, int argc) {
     // printf("wrong unit %s\n", gf->unit);
     return REDISMODULE_ERR;
   }
+  gf->property = strdup(gf->property);
+  gf->unit = strdup(gf->unit);
   return REDISMODULE_OK;
+}
+
+void GeoFilter_Free(GeoFilter *gf) {
+  free((char *)gf->property);
+  free((char *)gf->unit);
+  free(gf);
 }
 
 static int cmp_docids(const void *p1, const void *p2) {

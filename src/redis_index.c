@@ -87,6 +87,21 @@ RedisModuleString *fmtRedisScoreIndexKey(RedisSearchCtx *ctx, const char *term, 
                                         term);
 }
 
+RedisSearchCtx *NewSearchCtx(RedisModuleCtx *ctx, RedisModuleString *indexName) {
+  IndexSpec *sp = IndexSpec_Load(ctx, RedisModule_StringPtrLen(indexName, NULL), 0);
+  if (!sp) {
+    return NULL;
+  }
+
+  RedisSearchCtx *sctx = rm_malloc(sizeof(*sctx));
+  sctx->spec = sp;
+  sctx->redisCtx = ctx;
+  return sctx;
+}
+
+void SearchCtx_Free(RedisSearchCtx *sctx) {
+  rm_free(sctx);
+}
 /*
  * Select a random term from the index that matches the index prefix and inveted key format.
  * It tries RANDOMKEY 10 times and returns NULL if it can't find anything.
