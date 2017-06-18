@@ -750,20 +750,14 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
   }
 
   char *err;
+
   RSSearchRequest *req = ParseRequest(sctx, argv, argc, &err);
   if (req == NULL) {
     RedisModule_Log(ctx, "warning", "Error parsing request: %s\n", err);
     return RedisModule_ReplyWithError(ctx, err);
   }
 
-  if (filterGeo) {
-    Query_SetGeoFilter(q, &gf);
-  }
-
-  if (numFilteredIds > 0) {
-    Query_SetIdFilter(q, &idf);
-  }
-  q->docTable = &sp->docs;
+  Query *q = NewQueryFromRequest(req);
 
   // Execute the query
   QueryResult *r = Query_Execute(q);
@@ -772,9 +766,10 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     goto end;
   }
 
-  QueryResult_Serialize(r, &sctx, nocontent, withscores, withpaylaods);
+  QueryResult_Serialize(r, sctx, req->fieldMask);
   QueryResult_Free(r);
   Query_Free(q);
+  RSSearchRequest_Free(req);
 end:
   return REDISMODULE_OK;
 }

@@ -432,6 +432,23 @@ void QueryUnionNode_AddChild(QueryNode *parent, QueryNode *child) {
 
 QueryNode *StemmerExpand(void *ctx, Query *q, QueryNode *n);
 
+Query *NewQueryFromRequest(RSSearchRequest *req) {
+  Query *q = NewQuery(req->sctx, req->rawQuery, req->qlen, req->offset, req->num, req->fieldMask,
+                      req->flags & Search_Verbatim, req->language, req->sctx->spec->stopwords,
+                      req->expander, req->slop, req->flags & Search_InOrder, req->scorer,
+                      req->payload, req->sortBy);
+
+  if (req->geoFilter) {
+    Query_SetGeoFilter(q, req->geoFilter);
+  }
+
+  if (req->idFilter) {
+    Query_SetIdFilter(q, req->idFilter);
+  }
+  q->docTable = &req->sctx->spec->docs;
+
+  return q;
+}
 Query *NewQuery(RedisSearchCtx *ctx, const char *query, size_t len, int offset, int limit,
                 t_fieldMask fieldMask, int verbatim, const char *lang, StopWordList *stopwords,
                 const char *expander, int slop, int inOrder, const char *scorer, RSPayload payload,
@@ -892,8 +909,7 @@ int __queryResult_serializeFullResults(QueryResult *r, RedisSearchCtx *sctx, int
   return REDISMODULE_OK;
 }
 
-int QueryResult_Serialize(QueryResult *r, RedisSearchCtx *sctx, int nocontent, int withscores,
-                          int withpayloads) {
+int QueryResult_Serialize(QueryResult *r, RedisSearchCtx *sctx, RSSearchFlags flags) {
   RedisModuleCtx *ctx = sctx->redisCtx;
 
   if (r->errorString != NULL) {
@@ -901,9 +917,10 @@ int QueryResult_Serialize(QueryResult *r, RedisSearchCtx *sctx, int nocontent, i
   }
 
   // NOCONTENT mode - just return the ids
-  if (nocontent) {
-    return __queryResult_serializeNoContent(r, ctx, withscores);
+  if (flags & Search_NoContent) {
+    return __queryResult_serializeNoContent(r, ctx, flags & Search_WithScores);
   }
 
-  return __queryResult_serializeFullResults(r, sctx, withscores, withpayloads);
+  return __queryResult_serializeFullResults(r, sctx, flags & Search_WithScores,
+                                            flags & Search_WithPayloads);
 }

@@ -8,24 +8,6 @@
 
 RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int argc,
                               char **errStr) {
-  return NULL;
-}
-
-int argIndex(const char *arg, const char **argv, int argc) {
-
-  size_t larg = strlen(arg);
-  for (int offset = 0; offset < argc; offset++) {
-    if (strncasecmp(argv[offset], arg, larg) == 0) {
-      return offset;
-    }
-  }
-  return -1;
-}
-
-#define argExists(arg, argv, argc, minOffset) (argIndex(arg, argv, argc) >= minOffset)
-
-RSSearchRequest *ParseRequestCStr(RedisSearchCtx *ctx, RedisModuleString **argv, int argc,
-                                  char **errStr) {
 
   RSSearchRequest *req = calloc(1, sizeof(*req));
   *req = (RSSearchRequest){
@@ -112,6 +94,7 @@ RSSearchRequest *ParseRequestCStr(RedisSearchCtx *ctx, RedisModuleString **argv,
   if (!req->expander) {
     req->expander = DEFAULT_EXPANDER_NAME;
   }
+  req->expander = strdup(req->expander);
 
   // IF a payload exists, init it
   req->payload = (RSPayload){.data = NULL, .len = 0};
