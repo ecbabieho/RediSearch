@@ -25,6 +25,7 @@ typedef enum {
 typedef struct {
   /* RS Context */
   RedisSearchCtx *sctx;
+  RedisModuleBlockedClient *bc;
 
   char *rawQuery;
   size_t qlen;
@@ -65,5 +66,7 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
                               char **errStr);
 
 void RSSearchRequest_Free(RSSearchRequest *req);
+
+int RSSearchRequest_Process(RSSearchRequest *req);
 
 #endif

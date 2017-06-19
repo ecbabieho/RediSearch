@@ -42,6 +42,8 @@ typedef struct RSQuery {
 
   RedisSearchCtx *ctx;
 
+  ConcurrentSearchCtx conc;
+
   int maxSlop;
   // Whether phrases are in order or not
   int inOrder;

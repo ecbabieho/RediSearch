@@ -207,6 +207,7 @@ int IR_Read(void *ctx, RSIndexResult **e) {
   do {
     rc = IR_GenericRead(ir, &ir->record->docId, &ir->record->freq, &ir->record->fieldMask, offsets);
 
+    CONCURRENT_CTX_TICK(ir->csx);
     // add the record to the current result
     if (rc == INDEXREAD_OK) {
       if (!(ir->record->fieldMask & ir->fieldMask)) {
@@ -330,7 +331,7 @@ IndexReader *NewIndexReader(InvertedIndex *idx, DocTable *docTable, t_fieldMask 
                             IndexFlags flags, RSQueryTerm *term, int singleWordMode) {
   IndexReader *ret = rm_malloc(sizeof(IndexReader));
   ret->currentBlock = 0;
-
+  ret->csx = NULL;
   ret->idx = idx;
   ret->term = term;
 

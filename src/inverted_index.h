@@ -55,6 +55,8 @@ typedef struct indexReadCtx {
   size_t len;
   RSIndexResult *record;
   RSQueryTerm *term;
+
+  ConcurrentSearchCtx *csx;
 } IndexReader;
 
 /* Write a ForwardIndexEntry into an indexWriter, updating its score and skip

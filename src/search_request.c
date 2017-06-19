@@ -4,6 +4,9 @@
 #include "stemmer.h"
 #include "ext/default.h"
 #include "extension.h"
+#include "query.h"
+#include "dep/thpool/thpool.h"
+#include "redismodule.h"
 #include <sys/param.h>
 
 RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int argc,
@@ -12,6 +15,7 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
   RSSearchRequest *req = calloc(1, sizeof(*req));
   *req = (RSSearchRequest){
       .sctx = ctx,
+      .bc = NULL,
       .offset = 0,
       .num = 10,
       .flags = RS_DEFAULT_QUERY_FLAGS,
@@ -188,4 +192,102 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
     // }
     Vector_Free(req->numericFilters);
   }
+}
+
+static threadpool queryPool = NULL;
+
+void initPool() {
+  if (queryPool == NULL) {
+    queryPool = thpool_init(16);
+  }
+}
+
+/* Reply callback for blocking command HELLO.BLOCK */
+int SearchRequest_Reply(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  return REDISMODULE_OK;
+}
+
+/* Timeout callback for blocking command HELLO.BLOCK */
+int SearchRequest_Timeout(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
+  return RedisModule_ReplyWithSimpleString(ctx, "Request timedout");
+}
+
+/* Private data freeing callback for HELLO.BLOCK command. */
+void SearchRequest_FreeData(void *privdata) {
+}
+
+void threadProcessQuery(void *p) {
+  RSSearchRequest *req = p;
+  RedisModuleCtx *ctx = req->sctx->redisCtx = RedisModule_GetThreadSafeContext(req->bc);
+
+  RedisModule_ThreadSafeContextLock(ctx);
+  RedisModule_AutoMemory(ctx);
+
+  Query *q = NewQueryFromRequest(req);
+  char *err;
+  if (!Query_Parse(q, &err)) {
+
+    if (err) {
+      RedisModule_Log(ctx, "debug", "Error parsing query: %s", err);
+      RedisModule_ReplyWithError(ctx, err);
+      free(err);
+    } else {
+      /* Simulate an empty response - this means an empty query */
+      RedisModule_ReplyWithArray(ctx, 1);
+      RedisModule_ReplyWithLongLong(ctx, 0);
+    }
+    Query_Free(q);
+    goto end;
+  }
+
+  Query_Expand(q);
+
+  if (req->geoFilter) {
+    Query_SetGeoFilter(q, req->geoFilter);
+  }
+
+  if (req->idFilter) {
+    Query_SetIdFilter(q, req->idFilter);
+  }
+  // set numeric filters if possible
+  if (req->numericFilters) {
+    for (int i = 0; i < Vector_Size(req->numericFilters); i++) {
+      NumericFilter *nf;
+      Vector_Get(req->numericFilters, i, &nf);
+      if (nf) {
+        Query_SetNumericFilter(q, nf);
+      }
+    }
+
+    // Vector_Free(req->numericFilters);
+  }
+
+  // Execute the query
+  QueryResult *r = Query_Execute(q);
+  if (r == NULL) {
+    RedisModule_ReplyWithError(ctx, QUERY_ERROR_INTERNAL_STR);
+    goto end;
+  }
+
+  QueryResult_Serialize(r, req->sctx, req->flags);
+  QueryResult_Free(r);
+  Query_Free(q);
+  RSSearchRequest_Free(req);
+
+end:
+  RedisModule_ThreadSafeContextUnlock(ctx);
+  RedisModule_FreeThreadSafeContext(ctx);
+  RedisModule_UnblockClient(req->bc, NULL);
+  return;
+  //  return REDISMODULE_OK;
+}
+
+int RSSearchRequest_Process(RSSearchRequest *req) {
+
+  if (!queryPool) initPool();
+
+  req->bc = RedisModule_BlockClient(req->sctx->redisCtx, NULL, NULL, NULL, 0);
+
+  thpool_add_work(queryPool, threadProcessQuery, req);
+  return REDISMODULE_OK;
 }

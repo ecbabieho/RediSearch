@@ -203,10 +203,11 @@ IndexIterator *query_EvalTokenNode(Query *q, QueryNode *qn) {
 
   IndexReader *ir =
       Redis_OpenReader(q->ctx, &qn->tn, q->docTable, isSingleWord, q->fieldMask & qn->fieldMask);
-
   if (ir == NULL) {
     return NULL;
   }
+  ir->csx = &q->conc;
+
   return NewReadIterator(ir);
 }
 
@@ -245,9 +246,10 @@ IndexIterator *query_EvalPrefixNode(Query *q, QueryNode *qn) {
 
     // Open an index reader
     IndexReader *ir = Redis_OpenReader(q->ctx, &tok, q->docTable, 0, q->fieldMask & qn->fieldMask);
+
     free(tok.str);
     if (!ir) continue;
-
+    ir->csx = &q->conc;
     // Add the reader to the iterator array
     its[itsSz++] = NewReadIterator(ir);
     if (itsSz == itsCap) {
@@ -460,6 +462,9 @@ Query *NewQuery(RedisSearchCtx *ctx, const char *query, size_t len, int offset, 
   ret->stopwords = stopwords;
   ret->payload = payload;
   ret->sortKey = sk;
+  ret->conc.ctx = ctx->redisCtx;
+  ret->conc.ticker = 0;
+
   // ret->expander = verbatim ? NULL : expander ? GetQueryExpander(expander) : NULL;
   ret->language = lang ? lang : DEFAULT_LANGUAGE;
 
@@ -684,7 +689,7 @@ static int sortByCmp(const void *e1, const void *e2, const void *udata) {
 }
 
 QueryResult *Query_Execute(Query *query) {
-  __queryNode_Print(query, query->root, 0);
+  //__queryNode_Print(query, query->root, 0);
   QueryResult *res = malloc(sizeof(QueryResult));
   res->error = 0;
   res->errorString = NULL;
