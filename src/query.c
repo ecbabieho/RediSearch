@@ -438,13 +438,6 @@ Query *NewQueryFromRequest(RSSearchRequest *req) {
                       req->expander, req->slop, req->flags & Search_InOrder, req->scorer,
                       req->payload, req->sortBy);
 
-  if (req->geoFilter) {
-    Query_SetGeoFilter(q, req->geoFilter);
-  }
-
-  if (req->idFilter) {
-    Query_SetIdFilter(q, req->idFilter);
-  }
   q->docTable = &req->sctx->spec->docs;
 
   return q;
@@ -691,7 +684,7 @@ static int sortByCmp(const void *e1, const void *e2, const void *udata) {
 }
 
 QueryResult *Query_Execute(Query *query) {
-  //__queryNode_Print(query, query->root, 0);
+  __queryNode_Print(query, query->root, 0);
   QueryResult *res = malloc(sizeof(QueryResult));
   res->error = 0;
   res->errorString = NULL;

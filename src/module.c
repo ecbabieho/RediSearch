@@ -759,6 +759,43 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
   Query *q = NewQueryFromRequest(req);
 
+  if (!Query_Parse(q, &err)) {
+
+    if (err) {
+      RedisModule_Log(ctx, "debug", "Error parsing query: %s", err);
+      RedisModule_ReplyWithError(ctx, err);
+      free(err);
+    } else {
+      /* Simulate an empty response - this means an empty query */
+      RedisModule_ReplyWithArray(ctx, 1);
+      RedisModule_ReplyWithLongLong(ctx, 0);
+    }
+    Query_Free(q);
+    goto end;
+  }
+
+  Query_Expand(q);
+
+  if (req->geoFilter) {
+    Query_SetGeoFilter(q, req->geoFilter);
+  }
+
+  if (req->idFilter) {
+    Query_SetIdFilter(q, req->idFilter);
+  }
+  // set numeric filters if possible
+  if (req->numericFilters) {
+    for (int i = 0; i < Vector_Size(req->numericFilters); i++) {
+      NumericFilter *nf;
+      Vector_Get(req->numericFilters, i, &nf);
+      if (nf) {
+        Query_SetNumericFilter(q, nf);
+      }
+    }
+
+    // Vector_Free(req->numericFilters);
+  }
+
   // Execute the query
   QueryResult *r = Query_Execute(q);
   if (r == NULL) {
@@ -766,7 +803,7 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     goto end;
   }
 
-  QueryResult_Serialize(r, sctx, req->fieldMask);
+  QueryResult_Serialize(r, sctx, req->flags);
   QueryResult_Free(r);
   Query_Free(q);
   RSSearchRequest_Free(req);

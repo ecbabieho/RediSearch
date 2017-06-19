@@ -7,12 +7,12 @@
  * be less than or equal to the length of args */
 IdFilter *NewIdFilter(RedisModuleString **args, int count, DocTable *dt) {
 
-  IdFilter *ret = rm_malloc(sizeof(*ret));
+  IdFilter *ret = malloc(sizeof(*ret));
   *ret = (IdFilter){.ids = NULL, .keys = args, .size = 0};
   if (count <= 0) {
     return ret;
   }
-  ret->ids = rm_calloc(count, sizeof(t_docId));
+  ret->ids = calloc(count, sizeof(t_docId));
   for (int i = 0; i < count; i++) {
 
     t_docId did = DocTable_GetId(dt, RedisModule_StringPtrLen(args[i], NULL));
@@ -21,15 +21,21 @@ IdFilter *NewIdFilter(RedisModuleString **args, int count, DocTable *dt) {
     }
   }
 
+  printf("Id filter of size %d, ids:\n", ret->size);
+  for (int i = 0; i < ret->size; i++) {
+    printf("%d, ", ret->ids[i]);
+  }
+  printf("\n");
+
   return ret;
 }
 
 void IdFilter_Free(IdFilter *f) {
-  if (f->ids) {
-    rm_free(f->ids);
-    f->ids = NULL;
-  }
-  rm_free(f);
+  // if (f->ids) {
+  //   free(f->ids);
+  //   f->ids = NULL;
+  // }
+  free(f);
 }
 
 IndexIterator *NewIdFilterIterator(IdFilter *f) {

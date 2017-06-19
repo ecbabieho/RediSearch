@@ -11,7 +11,12 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
 
   RSSearchRequest *req = calloc(1, sizeof(*req));
   *req = (RSSearchRequest){
-      .sctx = ctx, .offset = 0, .num = 10, .flags = RS_DEFAULT_QUERY_FLAGS, .slop = -1,
+      .sctx = ctx,
+      .offset = 0,
+      .num = 10,
+      .flags = RS_DEFAULT_QUERY_FLAGS,
+      .slop = -1,
+      .fieldMask = RS_FIELDMASK_ALL,
   };
 
   // Detect "NOCONTENT"
@@ -46,17 +51,16 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
   // if INFIELDS exists, parse the field mask
   int inFieldsIdx = RMUtil_ArgIndex("INFIELDS", argv, argc);
   long long numFields = 0;
-  t_fieldMask fieldMask = RS_FIELDMASK_ALL;
+  req->fieldMask = RS_FIELDMASK_ALL;
   if (inFieldsIdx >= 3) {
     RMUtil_ParseArgs(argv, argc, inFieldsIdx + 1, "l", &numFields);
     if (numFields > 0 && inFieldsIdx + 1 + numFields < argc) {
-      fieldMask = IndexSpec_ParseFieldMask(ctx->spec, &argv[inFieldsIdx + 2], numFields);
+      req->fieldMask = IndexSpec_ParseFieldMask(ctx->spec, &argv[inFieldsIdx + 2], numFields);
     }
-    RedisModule_Log(ctx->redisCtx, "debug", "Parsed field mask: 0x%x\n", fieldMask);
+    RedisModule_Log(ctx->redisCtx, "warning", "Parsed field mask: 0x%x\n", req->fieldMask);
   }
 
   // Parse numeric filter. currently only one supported
-
   int filterIdx = RMUtil_ArgExists("FILTER", argv, argc, 3);
   if (filterIdx > 0) {
     req->numericFilters = ParseMultipleFilters(ctx, &argv[filterIdx], argc - filterIdx);
@@ -175,13 +179,13 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
   }
 
   if (req->numericFilters) {
-    for (int i = 0; i < Vector_Size(req->numericFilters); i++) {
-      NumericFilter *nf;
-      Vector_Get(req->numericFilters, 0, &nf);
-      if (nf) {
-        NumericFilter_Free(nf);
-      }
-    }
+    // for (int i = 0; i < Vector_Size(req->numericFilters); i++) {
+    //   NumericFilter *nf;
+    //   Vector_Get(req->numericFilters, 0, &nf);
+    //   if (nf) {
+    //     NumericFilter_Free(nf);
+    //   }
+    // }
     Vector_Free(req->numericFilters);
   }
 }
