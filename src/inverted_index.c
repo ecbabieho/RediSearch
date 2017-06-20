@@ -23,7 +23,7 @@ void InvertedIndex_AddBlock(InvertedIndex *idx, t_docId firstId) {
   idx->size++;
   idx->blocks = rm_realloc(idx->blocks, idx->size * sizeof(IndexBlock));
   idx->blocks[idx->size - 1] = (IndexBlock){.firstId = firstId, .lastId = 0, .numDocs = 0};
-  Buffer_Init(&(INDEX_LAST_BLOCK(idx).data), INDEX_BLOCK_INITIAL_CAP);
+  INDEX_LAST_BLOCK(idx).data = NewBuffer(INDEX_BLOCK_INITIAL_CAP);
 }
 
 InvertedIndex *NewInvertedIndex(IndexFlags flags, int initBlock) {
@@ -40,7 +40,7 @@ InvertedIndex *NewInvertedIndex(IndexFlags flags, int initBlock) {
 }
 
 void indexBlock_Free(IndexBlock *blk) {
-  Buffer_Free(&blk->data);
+  Buffer_Free(blk->data);
 }
 
 void InvertedIndex_Free(void *ctx) {
@@ -101,7 +101,7 @@ size_t InvertedIndex_WriteEntry(InvertedIndex *idx,
 
   RSOffsetVector offsets = (RSOffsetVector){ent->vw->bw.buf->data, ent->vw->bw.buf->offset};
 
-  BufferWriter bw = NewBufferWriter(&blk->data);
+  BufferWriter bw = NewBufferWriter(blk->data);
 
   ret = __writeEntry(&bw, idx->flags, ent->docId - blk->lastId, ent->fieldMask, ent->freq,
                      offsets.len, &offsets);
@@ -126,7 +126,7 @@ inline int IR_HasNext(void *ctx) {
 
 void indexReader_advanceBlock(IndexReader *ir) {
   ir->currentBlock++;
-  ir->br = NewBufferReader(&IR_CURRENT_BLOCK(ir).data);
+  ir->br = NewBufferReader(IR_CURRENT_BLOCK(ir).data);
   ir->lastId = 0;  // IR_CURRENT_BLOCK(ir).firstId;
 }
 
@@ -145,7 +145,7 @@ inline size_t __readEntry(BufferReader *br, IndexFlags idxflags, t_docId lastId,
 
       qint_decode4(br, docId, freq, fieldMask, &offsetsSz);
       if (offsets != NULL && !singleWordMode) {
-        offsets->data = br->pos;
+        offsets->data = BufferReader_Current(br);
         offsets->len = offsetsSz;
       }
       Buffer_Skip(br, offsetsSz);
@@ -156,7 +156,7 @@ inline size_t __readEntry(BufferReader *br, IndexFlags idxflags, t_docId lastId,
     case Index_StoreTermOffsets:
       qint_decode3(br, docId, freq, &offsetsSz);
       if (offsets != NULL && !singleWordMode) {
-        offsets->data = br->pos;
+        offsets->data = BufferReader_Current(br);
         offsets->len = offsetsSz;
       }
       Buffer_Skip(br, offsetsSz);
@@ -205,9 +205,9 @@ int IR_Read(void *ctx, RSIndexResult **e) {
   }
   int rc;
   do {
+
     rc = IR_GenericRead(ir, &ir->record->docId, &ir->record->freq, &ir->record->fieldMask, offsets);
 
-    CONCURRENT_CTX_TICK(ir->csx);
     // add the record to the current result
     if (rc == INDEXREAD_OK) {
       if (!(ir->record->fieldMask & ir->fieldMask)) {
@@ -271,7 +271,7 @@ int indexReader_skipToBlock(IndexReader *ir, t_docId docId) {
 
 found:
   ir->lastId = 0;
-  ir->br = NewBufferReader(&IR_CURRENT_BLOCK(ir).data);
+  ir->br = NewBufferReader(IR_CURRENT_BLOCK(ir).data);
   return 1;
 }
 
@@ -348,7 +348,7 @@ IndexReader *NewIndexReader(InvertedIndex *idx, DocTable *docTable, t_fieldMask 
 
   ret->fieldMask = fieldMask;
   ret->flags = flags;
-  ret->br = NewBufferReader(&IR_CURRENT_BLOCK(ret).data);
+  ret->br = NewBufferReader(IR_CURRENT_BLOCK(ret).data);
   return ret;
 }
 
@@ -397,10 +397,10 @@ typedef struct {
 int IndexBlock_Repair(IndexBlock *blk, DocTable *dt, IndexFlags flags) {
   t_docId lastReadId = 0;
   blk->lastId = 0;
-  Buffer repair = blk->data;
+  Buffer repair = *blk->data;
   repair.offset = 0;
 
-  BufferReader br = NewBufferReader(&blk->data);
+  BufferReader br = NewBufferReader(blk->data);
   BufferWriter bw = NewBufferWriter(&repair);
 
   t_docId docId;
@@ -432,8 +432,8 @@ int IndexBlock_Repair(IndexBlock *blk, DocTable *dt, IndexFlags flags) {
   }
   if (frags) {
     blk->numDocs -= frags;
-    blk->data = repair;
-    Buffer_Truncate(&blk->data, 0);
+    *blk->data = repair;
+    Buffer_Truncate(blk->data, 0);
   }
   // IndexReader *ir = NewIndexReader()
   return frags;

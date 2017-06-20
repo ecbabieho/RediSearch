@@ -464,6 +464,7 @@ Query *NewQuery(RedisSearchCtx *ctx, const char *query, size_t len, int offset, 
   ret->sortKey = sk;
   ret->conc.ctx = ctx->redisCtx;
   ret->conc.ticker = 0;
+  clock_gettime(CLOCK_MONOTONIC, &ret->conc.lastTime);
 
   // ret->expander = verbatim ? NULL : expander ? GetQueryExpander(expander) : NULL;
   ret->language = lang ? lang : DEFAULT_LANGUAGE;
@@ -721,6 +722,8 @@ QueryResult *Query_Execute(Query *query) {
   double minScore = 0;
   int numDeleted = 0;
   RSIndexResult *r = NULL;
+  ConcurrentSearchCtx *cxc = &query->conc;
+
   // iterate the root iterator and push everything to the PQ
   while (1) {
     // TODO - Use static allocation
@@ -756,6 +759,8 @@ QueryResult *Query_Execute(Query *query) {
       h->sv = NULL;
     }
     h->docId = r->docId;
+
+    CONCURRENT_CTX_TICK(cxc);
 
     if (heap_count(pq) < heap_size(pq)) {
       heap_offerx(pq, h);

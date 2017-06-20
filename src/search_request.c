@@ -202,6 +202,19 @@ void initPool() {
   }
 }
 
+inline void ConcurrentSearch_CheckTimer(ConcurrentSearchCtx *ctx) {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+
+  long long durationNS = ((long long)1000000000 * now.tv_sec + now.tv_nsec) -
+                         ((long long)1000000000 * ctx->lastTime.tv_sec + ctx->lastTime.tv_nsec);
+  if (durationNS > 100000) {
+    RedisModule_ThreadSafeContextUnlock(ctx->ctx);
+    // sched_yield();
+    RedisModule_ThreadSafeContextLock(ctx->ctx);
+    clock_gettime(CLOCK_MONOTONIC, &ctx->lastTime);
+  }
+}
 
 void threadProcessQuery(void *p) {
   RSSearchRequest *req = p;

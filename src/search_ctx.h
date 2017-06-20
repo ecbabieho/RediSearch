@@ -6,22 +6,24 @@
 #include "redismodule.h"
 #include "spec.h"
 #include "trie/trie_type.h"
+#include <time.h>
 
 #define CONCURRENT_SEARCH_POOL_SIZE 200
 
 typedef struct {
   long long ticker;
+  struct timespec lastTime;
   RedisModuleCtx *ctx;
 } ConcurrentSearchCtx;
 
-#define CONCURRENT_TICKS_PER_SWITCH 1000
+#define CONCURRENT_TICKS_PER_SWITCH 10
+
+void ConcurrentSearch_CheckTimer(ConcurrentSearchCtx *ctx);
 
 #define CONCURRENT_CTX_TICK(x)                                 \
   {                                                            \
     if (x && ++x->ticker % CONCURRENT_TICKS_PER_SWITCH == 0) { \
-      RedisModule_ThreadSafeContextUnlock(x->ctx);             \
-      sched_yield();                                           \
-      RedisModule_ThreadSafeContextLock(x->ctx);               \
+      ConcurrentSearch_CheckTimer(x);                          \
     }                                                          \
   }
 

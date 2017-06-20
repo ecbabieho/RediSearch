@@ -26,8 +26,10 @@ void *InvertedIndex_RdbLoad(RedisModuleIO *rdb, int encver) {
     blk->lastId = RedisModule_LoadUnsigned(rdb);
     blk->numDocs = RedisModule_LoadUnsigned(rdb);
 
-    blk->data.data = RedisModule_LoadStringBuffer(rdb, &blk->data.cap);
-    blk->data.offset = blk->data.cap;
+    size_t cap;
+    char *data = RedisModule_LoadStringBuffer(rdb, &cap);
+    blk->data = Buffer_Wrap(data, cap);
+    blk->data->offset = cap;
   }
   return idx;
 }
@@ -44,7 +46,7 @@ void InvertedIndex_RdbSave(RedisModuleIO *rdb, void *value) {
     RedisModule_SaveUnsigned(rdb, blk->firstId);
     RedisModule_SaveUnsigned(rdb, blk->lastId);
     RedisModule_SaveUnsigned(rdb, blk->numDocs);
-    RedisModule_SaveStringBuffer(rdb, blk->data.data, blk->data.offset);
+    RedisModule_SaveStringBuffer(rdb, blk->data->data, blk->data->offset);
   }
 }
 void InvertedIndex_Digest(RedisModuleDigest *digest, void *value) {

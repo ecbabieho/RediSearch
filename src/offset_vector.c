@@ -113,7 +113,7 @@ void _ovi_Rewind(void *ctx) {
   _RSOffsetVectorIterator *it = ctx;
   it->lastValue = 0;
   it->buf.offset = 0;
-  it->br.pos = it->buf.data;
+  it->br.pos = 0;
 }
 
 void _ovi_Free(void *ctx) {
