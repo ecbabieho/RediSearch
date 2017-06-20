@@ -20,21 +20,14 @@ IdFilter *NewIdFilter(RedisModuleString **args, int count, DocTable *dt) {
       ret->ids[ret->size++] = did;
     }
   }
-
-  printf("Id filter of size %d, ids:\n", ret->size);
-  for (int i = 0; i < ret->size; i++) {
-    printf("%d, ", ret->ids[i]);
-  }
-  printf("\n");
-
   return ret;
 }
 
 void IdFilter_Free(IdFilter *f) {
-  // if (f->ids) {
-  //   free(f->ids);
-  //   f->ids = NULL;
-  // }
+  if (f->ids) {
+    free(f->ids);
+    f->ids = NULL;
+  }
   free(f);
 }
 
