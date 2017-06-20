@@ -198,30 +198,17 @@ static threadpool queryPool = NULL;
 
 void initPool() {
   if (queryPool == NULL) {
-    queryPool = thpool_init(16);
+    queryPool = thpool_init(CONCURRENT_SEARCH_POOL_SIZE);
   }
 }
 
-/* Reply callback for blocking command HELLO.BLOCK */
-int SearchRequest_Reply(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-  return REDISMODULE_OK;
-}
-
-/* Timeout callback for blocking command HELLO.BLOCK */
-int SearchRequest_Timeout(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
-  return RedisModule_ReplyWithSimpleString(ctx, "Request timedout");
-}
-
-/* Private data freeing callback for HELLO.BLOCK command. */
-void SearchRequest_FreeData(void *privdata) {
-}
 
 void threadProcessQuery(void *p) {
   RSSearchRequest *req = p;
   RedisModuleCtx *ctx = req->sctx->redisCtx = RedisModule_GetThreadSafeContext(req->bc);
+  RedisModule_AutoMemory(ctx);
 
   RedisModule_ThreadSafeContextLock(ctx);
-  RedisModule_AutoMemory(ctx);
 
   Query *q = NewQueryFromRequest(req);
   char *err;

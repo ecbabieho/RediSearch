@@ -7,12 +7,14 @@
 #include "spec.h"
 #include "trie/trie_type.h"
 
+#define CONCURRENT_SEARCH_POOL_SIZE 200
+
 typedef struct {
   long long ticker;
   RedisModuleCtx *ctx;
 } ConcurrentSearchCtx;
 
-#define CONCURRENT_TICKS_PER_SWITCH 10000
+#define CONCURRENT_TICKS_PER_SWITCH 1000
 
 #define CONCURRENT_CTX_TICK(x)                                 \
   {                                                            \
