@@ -742,7 +742,6 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
   if (argc < 3) {
     return RedisModule_WrongArity(ctx);
   }
-  RedisModule_AutoMemory(ctx);
 
   RedisSearchCtx *sctx = NewSearchCtx(ctx, argv[1]);
   if (sctx == NULL) {

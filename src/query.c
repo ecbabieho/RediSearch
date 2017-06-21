@@ -459,7 +459,7 @@ Query *NewQuery(RedisSearchCtx *ctx, const char *query, size_t len, int offset, 
   ret->raw = strndup(query, len);
   ret->root = NULL;
   ret->numTokens = 0;
-  ret->stopwords = stopwords;
+  ret->stopwords = stopwords ? stopwords :DefaultStopWordList();
   ret->payload = payload;
   ret->sortKey = sk;
   ConcurrentSearchCtx_Init(ctx->redisCtx, &ret->conc);

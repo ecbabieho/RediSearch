@@ -93,6 +93,7 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
       *errStr = "Unsupported Stemmer Language";
       goto err;
     }
+    if (req->language) req->language = strdup(req->language);
   }
 
   // parse the optional expander argument
@@ -184,13 +185,13 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
   }
 
   if (req->numericFilters) {
-    // for (int i = 0; i < Vector_Size(req->numericFilters); i++) {
-    //   NumericFilter *nf;
-    //   Vector_Get(req->numericFilters, 0, &nf);
-    //   if (nf) {
-    //     NumericFilter_Free(nf);
-    //   }
-    // }
+    for (int i = 0; i < Vector_Size(req->numericFilters); i++) {
+      NumericFilter *nf;
+      Vector_Get(req->numericFilters, 0, &nf);
+      if (nf) {
+        NumericFilter_Free(nf);
+      }
+    }
     Vector_Free(req->numericFilters);
   }
 }
@@ -238,7 +239,8 @@ void threadProcessQuery(void *p) {
       }
     }
 
-    // Vector_Free(req->numericFilters);
+    Vector_Free(req->numericFilters);
+    req->numericFilters = NULL;
   }
 
   // Execute the query
