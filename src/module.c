@@ -1124,6 +1124,8 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
   // Init extension mechanism
   Extensions_Init();
 
+  ConcurrentSearch_ThreadPoolStart();
+
   if (argc > 0 && RMUtil_ArgIndex("EXTLOAD", argv, argc) >= 0) {
     const char *ext = NULL;
     RMUtil_ParseArgsAfter("EXTLOAD", argv, argc, "c", &ext);

@@ -331,7 +331,6 @@ IndexReader *NewIndexReader(InvertedIndex *idx, DocTable *docTable, t_fieldMask 
                             IndexFlags flags, RSQueryTerm *term, int singleWordMode) {
   IndexReader *ret = rm_malloc(sizeof(IndexReader));
   ret->currentBlock = 0;
-  ret->csx = NULL;
   ret->idx = idx;
   ret->term = term;
 

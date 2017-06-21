@@ -5,7 +5,7 @@
 #include "ext/default.h"
 #include "extension.h"
 #include "query.h"
-#include "dep/thpool/thpool.h"
+#include "concurrent_ctx.h"
 #include "redismodule.h"
 #include <sys/param.h>
 
@@ -119,10 +119,11 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
   }
 
   // parse SCORER argument
-  char *scorer = NULL;
-  RMUtil_ParseArgsAfter("SCORER", &argv[3], argc - 3, "c", &scorer);
-  if (scorer) {
-    if (Extensions_GetScoringFunction(NULL, scorer) == NULL) {
+
+  RMUtil_ParseArgsAfter("SCORER", &argv[3], argc - 3, "c", &req->scorer);
+  if (req->scorer) {
+    req->scorer = strdup(req->scorer);
+    if (Extensions_GetScoringFunction(NULL, req->scorer) == NULL) {
       *errStr = "Invalid scorer name";
       goto err;
     }
@@ -194,28 +195,6 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
   }
 }
 
-static threadpool queryPool = NULL;
-
-void initPool() {
-  if (queryPool == NULL) {
-    queryPool = thpool_init(CONCURRENT_SEARCH_POOL_SIZE);
-  }
-}
-
-inline void ConcurrentSearch_CheckTimer(ConcurrentSearchCtx *ctx) {
-  struct timespec now;
-  clock_gettime(CLOCK_MONOTONIC, &now);
-
-  long long durationNS = ((long long)1000000000 * now.tv_sec + now.tv_nsec) -
-                         ((long long)1000000000 * ctx->lastTime.tv_sec + ctx->lastTime.tv_nsec);
-  if (durationNS > 100000) {
-    RedisModule_ThreadSafeContextUnlock(ctx->ctx);
-    // sched_yield();
-    RedisModule_ThreadSafeContextLock(ctx->ctx);
-    clock_gettime(CLOCK_MONOTONIC, &ctx->lastTime);
-  }
-}
-
 void threadProcessQuery(void *p) {
   RSSearchRequest *req = p;
   RedisModuleCtx *ctx = req->sctx->redisCtx = RedisModule_GetThreadSafeContext(req->bc);
@@ -284,10 +263,7 @@ end:
 
 int RSSearchRequest_Process(RSSearchRequest *req) {
 
-  if (!queryPool) initPool();
-
   req->bc = RedisModule_BlockClient(req->sctx->redisCtx, NULL, NULL, NULL, 0);
-
-  thpool_add_work(queryPool, threadProcessQuery, req);
+  ConcurrentSearch_ThreadPoolRun(threadProcessQuery, req);
   return REDISMODULE_OK;
 }

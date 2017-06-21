@@ -14,6 +14,7 @@
 #include "extension.h"
 #include "ext/default.h"
 #include "rmutil/sds.h"
+#include "concurrent_ctx.h"
 
 #define MAX_PREFIX_EXPANSIONS 200
 
@@ -206,7 +207,6 @@ IndexIterator *query_EvalTokenNode(Query *q, QueryNode *qn) {
   if (ir == NULL) {
     return NULL;
   }
-  ir->csx = &q->conc;
 
   return NewReadIterator(ir);
 }
@@ -249,7 +249,7 @@ IndexIterator *query_EvalPrefixNode(Query *q, QueryNode *qn) {
 
     free(tok.str);
     if (!ir) continue;
-    ir->csx = &q->conc;
+
     // Add the reader to the iterator array
     its[itsSz++] = NewReadIterator(ir);
     if (itsSz == itsCap) {
@@ -462,9 +462,7 @@ Query *NewQuery(RedisSearchCtx *ctx, const char *query, size_t len, int offset, 
   ret->stopwords = stopwords;
   ret->payload = payload;
   ret->sortKey = sk;
-  ret->conc.ctx = ctx->redisCtx;
-  ret->conc.ticker = 0;
-  clock_gettime(CLOCK_MONOTONIC, &ret->conc.lastTime);
+  ConcurrentSearchCtx_Init(ctx->redisCtx, &ret->conc);
 
   // ret->expander = verbatim ? NULL : expander ? GetQueryExpander(expander) : NULL;
   ret->language = lang ? lang : DEFAULT_LANGUAGE;

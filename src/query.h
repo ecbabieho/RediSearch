@@ -16,6 +16,7 @@
 #include "redisearch.h"
 #include "rmutil/sds.h"
 #include "search_request.h"
+#include "concurrent_ctx.h"
 
 /* A Query represents the parse tree and execution plan for a single search
  * query */

@@ -22,7 +22,7 @@ INDEX=index.o forward_index.o index_result.o doc_table.o numeric_filter.o \
 		numeric_index.o geo_index.o qint.o inverted_index.o id_list.o id_filter.o offset_vector.o sortable.o 
 TEXT=tokenize.o stemmer.o dep/snowball/libstemmer.o stopwords.o
 EXTOBJS=ext/default.o  extension.o
-REDIS= redis_index.o query.o spec.o  module.o search_request.o
+REDIS= redis_index.o query.o spec.o  module.o search_request.o concurrent_ctx.o
 QUERY_PARSE=query_parser/lexer.o query_parser/parser.o
 UTILOBJS=util/heap.o util/logging.o util/fnv.o util/mempool.o dep/thpool/thpool.o
 RMUTILOBJS=rmutil/librmutil.a
@@ -103,6 +103,9 @@ debug: util rmutil snowball libnu trie  triemap | module.so
 	
 
 clean:
+	rm -fv *.o
+
+distclean:
 	find . -type f -name '*.o' -delete -print
 
 package: module.so
