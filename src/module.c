@@ -508,6 +508,7 @@ int QueryExplainCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc)
   char *explain = (char *)Query_DumpExplain(q);
   RedisModule_ReplyWithStringBuffer(ctx, explain, strlen(explain));
   free(explain);
+  Query_Free(q);
 end:
   return REDISMODULE_OK;
 }
@@ -743,6 +744,7 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     return RedisModule_WrongArity(ctx);
   }
 
+  RedisModule_AutoMemory(ctx);
   RedisSearchCtx *sctx = NewSearchCtx(ctx, argv[1]);
   if (sctx == NULL) {
     return RedisModule_ReplyWithError(ctx, "Unknown Index name");
@@ -756,7 +758,9 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     return RedisModule_ReplyWithError(ctx, err);
   }
 
-  return RSSearchRequest_Process(ctx, req);
+  int rc = RSSearchRequest_Process(ctx, req);
+  SearchCtx_Free(sctx);
+  return rc;
 }
 
 /*

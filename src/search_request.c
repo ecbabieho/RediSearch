@@ -201,7 +201,7 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
   }
 
   if (req->sctx) {
-    rm_free(req->sctx);
+    SearchCtx_Free(req->sctx);
   }
 
   free(req);
@@ -273,10 +273,10 @@ void threadProcessQuery(void *p) {
   Query_Free(q);
 
 end:
-  RSSearchRequest_Free(req);
   RedisModule_ThreadSafeContextUnlock(ctx);
   RedisModule_UnblockClient(req->bc, NULL);
   RedisModule_FreeThreadSafeContext(ctx);
+  RSSearchRequest_Free(req);
 
   return;
   //  return REDISMODULE_OK;

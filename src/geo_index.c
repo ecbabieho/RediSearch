@@ -104,5 +104,7 @@ IndexIterator *NewGeoRangeIterator(GeoIndex *gi, GeoFilter *gf) {
     return NULL;
   }
 
-  return NewIdListIterator(docIds, (t_offset)sz);
+  IndexIterator *ret = NewIdListIterator(docIds, (t_offset)sz);
+  rm_free(docIds);
+  return ret;
 }

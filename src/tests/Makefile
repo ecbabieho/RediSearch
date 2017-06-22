@@ -22,7 +22,7 @@ TESTS=test.o
 
 SRCDIR := $(shell pwd)
 DEPS := $(patsubst %, ../%, $(TEXT)  $(VARINT) $(INDEX) $(UTILOBJS) $(RMUTILOBJS) $(QUERY_PARSE) $(REDIS) $(LIBTRIEMAP) $(LIBTRIE) $(LIBNU) )
-LDFLAGS :=  -lc -lm -ldl
+LDFLAGS :=  -lc -lm -ldl -lpthread
 
 CC=gcc
 .SUFFIXES: .c .so .xo .o
