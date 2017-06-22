@@ -7,6 +7,7 @@
 #include "query.h"
 #include "concurrent_ctx.h"
 #include "redismodule.h"
+#include "rmalloc.h"
 #include <sys/param.h>
 
 RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int argc,
@@ -200,7 +201,7 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
   }
 
   if (req->sctx) {
-    free(req->sctx);
+    rm_free(req->sctx);
   }
 }
 
