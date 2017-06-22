@@ -41,6 +41,7 @@ InvertedIndex *NewInvertedIndex(IndexFlags flags, int initBlock) {
 
 void indexBlock_Free(IndexBlock *blk) {
   Buffer_Free(blk->data);
+  free(blk->data);
 }
 
 void InvertedIndex_Free(void *ctx) {

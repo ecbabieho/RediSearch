@@ -203,11 +203,15 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
   if (req->sctx) {
     rm_free(req->sctx);
   }
+
+  free(req);
 }
 
 void threadProcessQuery(void *p) {
   RSSearchRequest *req = p;
   RedisModuleCtx *ctx = RedisModule_GetThreadSafeContext(req->bc);
+  RedisModule_AutoMemory(ctx);
+
   RedisModule_ThreadSafeContextLock(ctx);
 
   req->sctx =
@@ -216,8 +220,6 @@ void threadProcessQuery(void *p) {
     RedisModule_ReplyWithError(ctx, "Unknown Index name");
     goto end;
   }
-
-  RedisModule_AutoMemory(ctx);
 
   Query *q = NewQueryFromRequest(req);
   char *err;
@@ -269,12 +271,13 @@ void threadProcessQuery(void *p) {
   QueryResult_Serialize(r, req->sctx, req->flags);
   QueryResult_Free(r);
   Query_Free(q);
-  RSSearchRequest_Free(req);
 
 end:
+  RSSearchRequest_Free(req);
   RedisModule_ThreadSafeContextUnlock(ctx);
-  RedisModule_FreeThreadSafeContext(ctx);
   RedisModule_UnblockClient(req->bc, NULL);
+  RedisModule_FreeThreadSafeContext(ctx);
+
   return;
   //  return REDISMODULE_OK;
 }
