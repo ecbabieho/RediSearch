@@ -160,6 +160,9 @@ err:
 }
 
 void RSSearchRequest_Free(RSSearchRequest *req) {
+
+  if (req->indexName) free(req->indexName);
+
   if (req->expander) free(req->expander);
 
   if (req->scorer) free(req->scorer);

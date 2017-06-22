@@ -59,11 +59,11 @@ void ConcurrentSearchCtx_Init(RedisModuleCtx *rctx, ConcurrentSearchCtx *ctx);
 /** This macro is called by concurrent executors (currently the query only).
  * It checks if enough time has passed and releases the global lock if that is the case.
  */
-#define CONCURRENT_CTX_TICK(x)                      \
-  {                                                 \
-    if (++x->ticker % CONCURRENT_TICK_CHECK == 0) { \
-      ConcurrentSearch_CheckTimer(x);               \
-    }                                               \
+#define CONCURRENT_CTX_TICK(x)                           \
+  {                                                      \
+    if (x && ++x->ticker % CONCURRENT_TICK_CHECK == 0) { \
+      ConcurrentSearch_CheckTimer(x);                    \
+    }                                                    \
   }
 
 #endif

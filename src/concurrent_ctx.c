@@ -42,6 +42,9 @@ inline void ConcurrentSearch_CheckTimer(ConcurrentSearchCtx *ctx) {
 
 /** Initialize a concurrent context */
 void ConcurrentSearchCtx_Init(RedisModuleCtx *rctx, ConcurrentSearchCtx *ctx) {
+  if (!rctx) {
+    ctx->ctx = NULL;
+  }
   ctx->ctx = rctx;
   ctx->ticker = 0;
   clock_gettime(CLOCK_MONOTONIC_RAW, &ctx->lastTime);
