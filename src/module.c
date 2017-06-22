@@ -756,7 +756,7 @@ int SearchCommand(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
     return RedisModule_ReplyWithError(ctx, err);
   }
 
-  return RSSearchRequest_Process(req);
+  return RSSearchRequest_Process(ctx, req);
 }
 
 /*

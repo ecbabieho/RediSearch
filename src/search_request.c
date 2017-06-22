@@ -14,7 +14,8 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
 
   RSSearchRequest *req = calloc(1, sizeof(*req));
   *req = (RSSearchRequest){
-      .sctx = ctx,
+      .sctx = NULL,
+      .indexName = strdup(RedisModule_StringPtrLen(argv[1], NULL)),
       .bc = NULL,
       .offset = 0,
       .num = 10,
@@ -194,14 +195,25 @@ void RSSearchRequest_Free(RSSearchRequest *req) {
     }
     Vector_Free(req->numericFilters);
   }
+
+  if (req->sctx) {
+    free(req->sctx);
+  }
 }
 
 void threadProcessQuery(void *p) {
   RSSearchRequest *req = p;
-  RedisModuleCtx *ctx = req->sctx->redisCtx = RedisModule_GetThreadSafeContext(req->bc);
-  RedisModule_AutoMemory(ctx);
-
+  RedisModuleCtx *ctx = RedisModule_GetThreadSafeContext(req->bc);
   RedisModule_ThreadSafeContextLock(ctx);
+
+  req->sctx =
+      NewSearchCtx(ctx, RedisModule_CreateString(ctx, req->indexName, strlen(req->indexName)));
+  if (!req->sctx) {
+    RedisModule_ReplyWithError(ctx, "Unknown Index name");
+    goto end;
+  }
+
+  RedisModule_AutoMemory(ctx);
 
   Query *q = NewQueryFromRequest(req);
   char *err;
@@ -263,9 +275,8 @@ end:
   //  return REDISMODULE_OK;
 }
 
-int RSSearchRequest_Process(RSSearchRequest *req) {
-
-  req->bc = RedisModule_BlockClient(req->sctx->redisCtx, NULL, NULL, NULL, 0);
+int RSSearchRequest_Process(RedisModuleCtx *ctx, RSSearchRequest *req) {
+  req->bc = RedisModule_BlockClient(ctx, NULL, NULL, NULL, 0);
   ConcurrentSearch_ThreadPoolRun(threadProcessQuery, req);
   return REDISMODULE_OK;
 }

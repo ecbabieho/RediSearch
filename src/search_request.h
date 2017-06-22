@@ -23,6 +23,8 @@ typedef enum {
 #define RS_DEFAULT_QUERY_FLAGS 0x00
 
 typedef struct {
+  /* The index name - since we need to open the spec in a side thread */
+  char *indexName;
   /* RS Context */
   RedisSearchCtx *sctx;
   RedisModuleBlockedClient *bc;
@@ -67,6 +69,6 @@ RSSearchRequest *ParseRequest(RedisSearchCtx *ctx, RedisModuleString **argv, int
 
 void RSSearchRequest_Free(RSSearchRequest *req);
 
-int RSSearchRequest_Process(RSSearchRequest *req);
+int RSSearchRequest_Process(RedisModuleCtx *ctx, RSSearchRequest *req);
 
 #endif
