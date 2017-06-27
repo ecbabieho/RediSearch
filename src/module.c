@@ -1224,6 +1224,8 @@ int RediSearch_InitModuleInternal(RedisModuleCtx *ctx, RedisModuleString **argv,
   return REDISMODULE_OK;
 }
 
+/* Only compile the entry point if compiling the module as a standalone module */
+#ifndef RS_STATIC
 int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) {
 
   if (RedisModule_Init(ctx, "ft", REDISEARCH_MODULE_VERSION, REDISMODULE_APIVER_1) ==
@@ -1232,3 +1234,4 @@ int RedisModule_OnLoad(RedisModuleCtx *ctx, RedisModuleString **argv, int argc) 
 
   return RediSearch_InitModuleInternal(ctx, argv, argc);
 }
+#endif
